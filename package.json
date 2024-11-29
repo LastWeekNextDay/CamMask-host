@@ -2,9 +2,13 @@
   "name": "cammask-host",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "functions/index.js",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node functions/index.js"
   },
   "repository": {
     "type": "git",
@@ -12,6 +16,7 @@
   },
   "private": true,
   "dependencies": {
+    "express": "^4.21.1",
     "firebase-admin": "^13.0.1",
     "firebase-functions": "^6.1.1"
   }
