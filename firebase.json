@@ -16,7 +16,10 @@
       ]
     }
   ],
-  "storage": {
-    "rules": "storage.rules"
-  }
+  "storage": [
+    {
+      "rules": "storage.rules",
+      "bucket": "gs://cammask-d31a3.firebasestorage.app"
+    }
+  ]
 }
