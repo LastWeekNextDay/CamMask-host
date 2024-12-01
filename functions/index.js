@@ -292,12 +292,12 @@ exports.createMask = onRequest(async (req, res) => {
       const now = new Date().toISOString();
       const maskData = {
          id: nextId,
-         maskUrl,
-         name,
+         maskUrl: maskUrl,
+         maskName: name,
          description: description || '',
-         images,
+         images: images,
          tags: tags || [],
-         uploaderGoogleId,
+         uploaderGoogleId:uploaderGoogleId,
          uploadedOn: now,
          lastAccessedOn: now,
          isRemoved: false
