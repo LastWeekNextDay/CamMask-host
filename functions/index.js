@@ -361,74 +361,78 @@ exports.getMask = onRequest(async (req, res) => {
 exports.getMasks = onRequest(async (req, res) => {
    logger.info('Got getting masks request');
 
-    if (req.method !== 'GET') {
-        logger.error('getMasks: Method not allowed (expected GET)');
-        res.status(405).send('Method not allowed');
-        return;
-    }
+   if (req.method !== 'GET') {
+      logger.error('getMasks: Method not allowed (expected GET)');
+      res.status(405).send('Method not allowed');
+      return;
+   }
 
-    try {
-       let {
-          limit,
-          lastSnapshot,
-          sortBy,
-          sortDirection,
-          filterTags
-       } = req.query;
+   try {
+      let {
+         limit,
+         orderBy,
+         orderDirection,
+         lastId,
+         filterTags
+      } = req.query;
 
-       if (limit === "" || limit == null) {
-          limit = 6;
-       }
+      logger.info('Query params:', { limit, orderBy, orderDirection, lastId, filterTags });
 
-       if (lastSnapshot === "") {
-          lastSnapshot = null;
-       }
+      limit = parseInt(limit) || 6;
 
-       if (sortBy === "" || sortBy == null) {
-          sortBy = 'ratingsCount';
-       }
+      if (orderBy !== 'ratingsCount' && orderBy !== 'uploadedOn' && orderBy !== 'averageRating' && orderBy !== 'maskName') {
+         orderBy = 'ratingsCount';
+      }
 
-       if (sortDirection === "" || sortDirection == null) {
-          sortDirection = "desc";
-       }
+      if (orderDirection !== 'asc' && orderDirection !== 'desc') {
+         orderDirection = 'desc';
+      } else {
+         orderDirection = orderDirection.toLowerCase();
+      }
 
-       if (filterTags === "" || filterTags == null) {
-          filterTags = [];
-       }
+      const masksRef = db.collection('masks');
+      let masksQuery = masksRef.orderBy(orderBy, orderDirection);
 
-       const masksRef = db.collection('masks');
-       let masksQuery = masksRef.orderBy(sortBy.toString(), sortDirection);
+      if (filterTags) {
+         logger.info('Filtering by tags:', filterTags);
+         filterTags = filterTags.split(',');
+         filterTags.forEach(tag => {
+            masksQuery = masksQuery.where('tags', 'array-contains', tag);
+         });
+      }
 
-       if (filterTags.length > 0) {
-          for (let i = 0; i < filterTags.length; i++) {
-             masksQuery = masksQuery.where('tags', 'array-contains', filterTags[i]);
-          }
-       }
+      if (lastId) {
+         logger.info('Starting after ID:', lastId);
+         const lastDoc = await masksRef.doc(lastId).get();
+         if (lastDoc.exists) {
+            masksQuery = masksQuery.startAfter(lastDoc);
+         }
+      }
 
-       if (lastSnapshot) {
-          masksQuery = masksQuery.startAfter(lastSnapshot);
-       }
+      masksQuery = masksQuery.limit(limit);
 
-       masksQuery = masksQuery.limit(parseInt(limit.toString()));
+      const masksSnapshot = await masksQuery.get();
+      const masks = [];
+      masksSnapshot.forEach(doc => {
+         masks.push(doc.data());
+      });
 
-       const masksSnapshot = await masksQuery.get();
-       const masks = [];
-       masksSnapshot.forEach(doc => {
-          masks.push(doc.data());
-       });
+      logger.info(`getMasks: Retrieved ${masks.length} masks`);
 
-       logger.info('getMasks: Masks retrieved successfully');
-       res.status(200).json({
-            masks: masks,
-            currentSnapshot: masksSnapshot.docs[masksSnapshot.docs.length - 1]
-       });
-    } catch (error) {
-        logger.error('getMasks: Error getting masks', error);
-        res.status(500).json({
-            success: false,
-            error: 'Error getting masks: ' + error
-        });
-    }
+      const lastDoc = masksSnapshot.docs[masksSnapshot.docs.length - 1];
+      const nextId = lastDoc ? lastDoc.id : null;
+
+      res.status(200).json({
+         masks: masks,
+         lastId: nextId
+      });
+   } catch (error) {
+      logger.error('getMasks: Error getting masks', error);
+      res.status(500).json({
+         success: false,
+         error: 'Error getting masks: ' + error
+      });
+   }
 });
 
 exports.postRating = onRequest(async (req, res) => {
