@@ -298,6 +298,8 @@ exports.createMask = onRequest(async (req, res) => {
          images: images,
          tags: tags || [],
          uploaderGoogleId:uploaderGoogleId,
+         averageRating: 0,
+         ratingsCount: 0,
          uploadedOn: now,
          lastAccessedOn: now,
          isRemoved: false
@@ -318,4 +320,5 @@ exports.createMask = onRequest(async (req, res) => {
          error: 'Error creating mask: ' + error
       });
    }
+});
 });
