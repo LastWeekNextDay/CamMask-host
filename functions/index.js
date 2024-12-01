@@ -533,4 +533,121 @@ exports.postRating = onRequest(async (req, res) => {
       });
    }
 });
+
+exports.postComment = onRequest(async (req, res) => {
+   logger.info('Got post comment request');
+
+    if (req.method !== 'POST') {
+        logger.error('postComment: Method not allowed (expected POST)');
+        res.status(405).send('Method not allowed');
+        return;
+    }
+
+    try {
+        const {
+            maskId,
+            googleId,
+            comment
+        } = req.body;
+
+        if (maskId === "" || maskId == null) {
+            logger.error('postComment: maskId is empty');
+            res.status(400).send('maskId is empty');
+            return;
+        }
+
+        if (googleId === "" || googleId == null) {
+            logger.error('postComment: googleId is empty');
+            res.status(400).send('googleId is empty');
+            return;
+        }
+
+        if (comment === "" || comment == null) {
+            logger.error('postComment: comment is empty');
+            res.status(400).send('comment is empty');
+            return;
+        }
+
+        const maskRef = await db.collection('masks').doc(maskId).get();
+        if (!maskRef.exists) {
+            logger.error('postComment: Mask not found');
+            res.status(404).send('Mask not found');
+            return;
+        }
+
+        const userRef = await db.collection('users').doc(googleId).get();
+        if (!userRef.exists) {
+            logger.error('postComment: User not found');
+            res.status(404).send('User not found');
+            return;
+        }
+
+        if (!userRef.data().canComment) {
+            logger.error('postComment: User cannot comment');
+            res.status(403).send('User is not allowed to comment');
+            return;
+        }
+
+        const now = new Date().toISOString();
+        const commentData = {
+            maskId: maskId,
+            googleId: googleId,
+            comment: comment,
+            postedOn: now
+        };
+
+        await db.collection('comments').add(commentData);
+        logger.info('postComment: Comment posted successfully');
+
+        res.status(200).json({
+            success: true
+        });
+    } catch (error) {
+        logger.error('postComment: Error posting comment', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error posting comment: ' + error
+        });
+    }
+});
+
+exports.getComments = onRequest(async (req, res) => {
+   logger.info('Got getting comments request');
+
+    if (req.method !== 'GET') {
+        logger.error('getComments: Method not allowed (expected GET)');
+        res.status(405).send('Method not allowed');
+        return;
+    }
+
+    try {
+        const maskId = req.query.maskId;
+        if (maskId === "" || maskId == null) {
+            logger.error('getComments: maskId is empty');
+            res.status(400).send('maskId is empty');
+            return;
+        }
+
+        const maskRef = await db.collection('masks').doc(maskId).get();
+        if (!maskRef.exists) {
+            logger.error('getComments: Mask not found');
+            res.status(404).send('Mask not found');
+            return;
+        }
+
+        const commentsSnapshot = await db.collection('comments').where('maskId', '==', maskId).orderBy('postedOn', 'desc').get();
+        const comments = [];
+        commentsSnapshot.forEach(doc => {
+            comments.push(doc.data());
+        });
+
+        logger.info('getComments: Comments retrieved successfully');
+        res.status(200).json(comments);
+    } catch (error) {
+        logger.error('getComments: Error getting comments', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error getting comments: ' + error
+        });
+    }
 });
