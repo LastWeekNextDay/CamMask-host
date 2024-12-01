@@ -430,4 +430,107 @@ exports.getMasks = onRequest(async (req, res) => {
         });
     }
 });
+
+exports.postRating = onRequest(async (req, res) => {
+   logger.info('Got post rating request');
+
+   if (req.method !== 'POST') {
+      logger.error('postRating: Method not allowed (expected POST)');
+      res.status(405).send('Method not allowed');
+      return;
+   }
+
+   try {
+      const {
+         maskId,
+         googleId,
+         rating
+      } = req.body;
+
+      if (maskId === "" || maskId == null) {
+         logger.error('postRating: maskId is empty');
+         res.status(400).send('maskId is empty');
+         return;
+      }
+
+      if (googleId === "" || googleId == null) {
+         logger.error('postRating: googleId is empty');
+         res.status(400).send('googleId is empty');
+         return;
+      }
+
+      if (rating === "" || rating == null) {
+         logger.error('postRating: rating is empty');
+         res.status(400).send('rating is empty');
+         return;
+      }
+
+      const maskRef = await db.collection('masks').doc(maskId).get();
+      if (!maskRef.exists) {
+         logger.error('postRating: Mask not found');
+         res.status(404).send('Mask not found');
+         return;
+      }
+
+      const userRef = await db.collection('users').doc(googleId).get();
+      if (!userRef.exists) {
+         logger.error('postRating: User not found');
+         res.status(404).send('User not found');
+         return;
+      }
+
+      if (!userRef.data().canComment) {
+         logger.error('postRating: User cannot comment');
+         res.status(403).send('User is not allowed to comment');
+         return;
+      }
+
+      const ratingsSnapshot = await db.collection('ratings').where('maskId', '==', maskId).where('googleId', '==', googleId).get();
+      if (!ratingsSnapshot.empty) {
+         const now = new Date().toISOString();
+
+         await db.collection('ratings').doc(ratingsSnapshot.docs[0].id).update({
+            rating: rating,
+            postedOn: now
+         });
+         logger.info('postRating: Rating updated successfully');
+      } else {
+         const now = new Date().toISOString();
+         const ratingData = {
+            maskId: maskId,
+            googleId: googleId,
+            rating: rating,
+            postedOn: now
+         };
+
+         await db.collection('ratings').add(ratingData);
+         logger.info('postRating: Rating posted successfully');
+      }
+
+      const ratings = await db.collection('ratings').where('maskId', '==', maskId).get();
+      let totalRating = 0;
+      let ratingCount = 0;
+      ratings.forEach(doc => {
+         const ratingData = doc.data();
+         totalRating += ratingData.rating;
+         ratingCount++;
+      });
+      const averageRating = totalRating / ratingCount;
+      await db.collection('masks').doc(maskId).update({
+         averageRating: averageRating,
+         ratingsCount: ratingCount
+      });
+      logger.info('postRating: Average rating updated successfully');
+
+      res.status(200).json({
+         success: true
+      })
+   } catch (error) {
+      logger.error('postRating: Error posting rating', error);
+      res.status(500).json({
+         success: false,
+         error: 'Error posting rating: ' + error
+      });
+   }
+});
 });
