@@ -11,7 +11,7 @@ const {onRequest} = require("firebase-functions/v2/https");
 const {initializeApp} = require("firebase-admin/app");
 const {getFirestore} = require("firebase-admin/firestore");
 const logger = require("firebase-functions/logger");
-const {getStorage} = require("firebase-admin/storage");
+const {getStorage, getDownloadURL} = require("firebase-admin/storage");
 const crypto = require("crypto");
 const Busboy = require('busboy');
 const path = require('path');
@@ -170,7 +170,7 @@ exports.uploadFile = onRequest(async (req, res) => {
                   const [uploadedFile] = await bucket.upload(filepath, options);
 
                   await uploadedFile.makePublic();
-                  const publicUrl = `https://firebasestorage.googleapis.com/v0/b/cammask-d31a3.appspot.com/o/${encodeURIComponent(uniqueFilename)}?alt=media`;
+                  const downloadUrl = await getDownloadURL(uploadedFile);
 
                   fs.unlink(filepath, (err) => {
                      if (err) logger.error('Error removing temp file:', err);
@@ -179,7 +179,7 @@ exports.uploadFile = onRequest(async (req, res) => {
                   resolve({
                      fieldname,
                      originalName: fileInfo.filename,
-                     url: publicUrl
+                     url: downloadUrl
                   });
                } catch (error) {
                   reject(error);
