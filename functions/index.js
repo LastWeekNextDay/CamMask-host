@@ -321,4 +321,113 @@ exports.createMask = onRequest(async (req, res) => {
       });
    }
 });
+
+exports.getMask = onRequest(async (req, res) => {
+   logger.info('Got getting mask request');
+
+   if (req.method !== 'GET') {
+      logger.error('getMask: Method not allowed (expected GET)');
+      res.status(405).send('Method not allowed');
+      return;
+   }
+
+   try {
+      const maskId = req.query.maskId;
+      if (maskId === "" || maskId == null) {
+         logger.error('getMask: maskId is empty');
+         res.status(400).send('maskId is empty');
+         return;
+      }
+
+      const maskRef = await db.collection('masks').doc(maskId.toString()).get();
+      if (!maskRef.exists) {
+         logger.error('getMask: Mask not found');
+         res.status(404).send('Mask not found');
+         return;
+      }
+
+      const maskData = maskRef.data();
+      logger.info('getMask: Mask retrieved successfully');
+      res.status(200).json(maskData);
+   } catch (error) {
+      logger.error('getMask: Error getting mask', error);
+      res.status(500).json({
+         success: false,
+         error: 'Error getting mask: ' + error
+      });
+   }
+});
+
+exports.getMasks = onRequest(async (req, res) => {
+   logger.info('Got getting masks request');
+
+    if (req.method !== 'GET') {
+        logger.error('getMasks: Method not allowed (expected GET)');
+        res.status(405).send('Method not allowed');
+        return;
+    }
+
+    try {
+       let {
+          limit,
+          lastSnapshot,
+          sortBy,
+          sortDirection,
+          filterTags
+       } = req.query;
+
+       if (limit === "" || limit == null) {
+          limit = 6;
+       }
+
+       if (lastSnapshot === "") {
+          lastSnapshot = null;
+       }
+
+       if (sortBy === "" || sortBy == null) {
+          sortBy = 'ratingsCount';
+       }
+
+       if (sortDirection === "" || sortDirection == null) {
+          sortDirection = "desc";
+       }
+
+       if (filterTags === "" || filterTags == null) {
+          filterTags = [];
+       }
+
+       const masksRef = db.collection('masks');
+       let masksQuery = masksRef.orderBy(sortBy.toString(), sortDirection);
+
+       if (filterTags.length > 0) {
+          for (let i = 0; i < filterTags.length; i++) {
+             masksQuery = masksQuery.where('tags', 'array-contains', filterTags[i]);
+          }
+       }
+
+       if (lastSnapshot) {
+          masksQuery = masksQuery.startAfter(lastSnapshot);
+       }
+
+       masksQuery = masksQuery.limit(parseInt(limit.toString()));
+
+       const masksSnapshot = await masksQuery.get();
+       const masks = [];
+       masksSnapshot.forEach(doc => {
+          masks.push(doc.data());
+       });
+
+       logger.info('getMasks: Masks retrieved successfully');
+       res.status(200).json({
+            masks: masks,
+            currentSnapshot: masksSnapshot.docs[masksSnapshot.docs.length - 1]
+       });
+    } catch (error) {
+        logger.error('getMasks: Error getting masks', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error getting masks: ' + error
+        });
+    }
+});
 });
