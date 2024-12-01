@@ -370,11 +370,12 @@ exports.getMasks = onRequest(async (req, res) => {
     try {
        let {
           limit,
-          lastSnapshot,
           sortBy,
           sortDirection,
           filterTags
        } = req.query;
+
+       let { lastSnapshot } = req.body;
 
        if (limit === "" || limit == null) {
           limit = 6;
