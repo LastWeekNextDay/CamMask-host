@@ -540,6 +540,65 @@ exports.postRating = onRequest(async (req, res) => {
    }
 });
 
+exports.getRating = onRequest(async (req, res) => {
+   logger.info('Got getting rating request');
+
+    if (req.method !== 'GET') {
+        logger.error('getRating: Method not allowed (expected GET)');
+        res.status(405).send('Method not allowed');
+        return;
+    }
+
+    try {
+        const maskId = req.query.maskId;
+        if (maskId === "" || maskId == null) {
+            logger.error('getRating: maskId is empty');
+            res.status(400).send('maskId is empty');
+            return;
+        }
+
+        const googleId = req.query.googleId;
+        if (googleId === "" || googleId == null) {
+            logger.error('getRating: googleId is empty');
+            res.status(400).send('googleId is empty');
+            return;
+        }
+
+        const maskDocId = String(maskId);
+
+        const maskRef = await db.collection('masks').doc(maskDocId).get();
+        if (!maskRef.exists) {
+            logger.error('getRating: Mask not found');
+            res.status(404).send('Mask not found');
+            return;
+        }
+
+        const userRef = await db.collection('users').doc(googleId).get();
+        if (!userRef.exists) {
+            logger.error('getRating: User not found');
+            res.status(404).send('User not found');
+            return;
+        }
+
+        const ratingsSnapshot = await db.collection('ratings').where('maskId', '==', maskId).where('googleId', '==', googleId).get();
+        if (ratingsSnapshot.empty) {
+            logger.error('getRating: Rating not found');
+            res.status(404).send('Rating not found');
+            return;
+        }
+
+        const ratingData = ratingsSnapshot.docs[0].data();
+        logger.info('getRating: Rating retrieved successfully');
+        res.status(200).json(ratingData);
+    } catch (error) {
+        logger.error('getRating: Error getting rating', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error getting rating: ' + error
+        });
+    }
+});
+
 exports.postComment = onRequest(async (req, res) => {
    logger.info('Got post comment request');
 
