@@ -469,7 +469,9 @@ exports.postRating = onRequest(async (req, res) => {
          return;
       }
 
-      const maskRef = await db.collection('masks').doc(maskId).get();
+      const maskDocId = String(maskId);
+
+      const maskRef = await db.collection('masks').doc(maskDocId).get();
       if (!maskRef.exists) {
          logger.error('postRating: Mask not found');
          res.status(404).send('Mask not found');
@@ -501,7 +503,7 @@ exports.postRating = onRequest(async (req, res) => {
       } else {
          const now = new Date().toISOString();
          const ratingData = {
-            maskId: maskId,
+            maskId: maskDocId,
             googleId: googleId,
             rating: rating,
             postedOn: now
@@ -511,7 +513,7 @@ exports.postRating = onRequest(async (req, res) => {
          logger.info('postRating: Rating posted successfully');
       }
 
-      const ratings = await db.collection('ratings').where('maskId', '==', maskId).get();
+      const ratings = await db.collection('ratings').where('maskId', '==', maskDocId).get();
       let totalRating = 0;
       let ratingCount = 0;
       ratings.forEach(doc => {
@@ -520,7 +522,7 @@ exports.postRating = onRequest(async (req, res) => {
          ratingCount++;
       });
       const averageRating = totalRating / ratingCount;
-      await db.collection('masks').doc(maskId).update({
+      await db.collection('masks').doc(maskDocId).update({
          averageRating: averageRating,
          ratingsCount: ratingCount
       });
@@ -572,7 +574,9 @@ exports.postComment = onRequest(async (req, res) => {
             return;
         }
 
-        const maskRef = await db.collection('masks').doc(maskId).get();
+        const maskDocId = String(maskId);
+
+        const maskRef = await db.collection('masks').doc(maskDocId).get();
         if (!maskRef.exists) {
             logger.error('postComment: Mask not found');
             res.status(404).send('Mask not found');
@@ -594,7 +598,7 @@ exports.postComment = onRequest(async (req, res) => {
 
         const now = new Date().toISOString();
         const commentData = {
-            maskId: maskId,
+            maskId: maskDocId,
             googleId: googleId,
             comment: comment,
             postedOn: now
