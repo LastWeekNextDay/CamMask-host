@@ -372,11 +372,10 @@ exports.getMasks = onRequest(async (req, res) => {
          limit,
          orderBy,
          orderDirection,
-         lastId,
-         filterTags
+         lastId
       } = req.query;
 
-      logger.info('Query params:', { limit, orderBy, orderDirection, lastId, filterTags });
+      logger.info('Query params:', { limit, orderBy, orderDirection, lastId});
 
       limit = parseInt(limit) || 6;
 
@@ -392,14 +391,6 @@ exports.getMasks = onRequest(async (req, res) => {
 
       const masksRef = db.collection('masks');
       let masksQuery = masksRef.orderBy(orderBy, orderDirection);
-
-      if (filterTags) {
-         logger.info('Filtering by tags:', filterTags);
-         filterTags = filterTags.split(',');
-         filterTags.forEach(tag => {
-            masksQuery = masksQuery.where('tags', 'array-contains', tag);
-         });
-      }
 
       if (lastId) {
          logger.info('Starting after ID:', lastId);
