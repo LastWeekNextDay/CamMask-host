@@ -709,3 +709,71 @@ exports.getComments = onRequest(async (req, res) => {
         });
     }
 });
+
+exports.postReport = onRequest(async (req, res) => {
+   logger.info('Got post report request');
+
+    if (req.method !== 'POST') {
+        logger.error('postReport: Method not allowed (expected POST)');
+        res.status(405).send('Method not allowed');
+        return;
+    }
+
+    try {
+       const {
+          reportedItemType,
+          reportedItemId,
+          reporterGoogleId,
+          reason,
+          description
+       } = req.body;
+
+       if (reportedItemType === "" || reportedItemType == null) {
+          logger.error('postReport: reportedItemType is empty');
+          res.status(400).send('reportedItemType is empty');
+          return;
+       }
+
+       if (reportedItemId === "" || reportedItemId == null) {
+          logger.error('postReport: reportedItemId is empty');
+          res.status(400).send('reportedItemId is empty');
+          return;
+       }
+
+       if (reporterGoogleId === "" || reporterGoogleId == null) {
+          logger.error('postReport: reporterGoogleId is empty');
+          res.status(400).send('reporterGoogleId is empty');
+          return;
+       }
+
+       if (reason === "" || reason == null) {
+          logger.error('postReport: reason is empty');
+          res.status(400).send('reason is empty');
+          return;
+       }
+
+       const now = new Date().toISOString();
+
+       const reportData = {
+          reportedItemType: reportedItemType,
+          reportedItemId: reportedItemId,
+          reporterGoogleId: reporterGoogleId,
+          reason: reason,
+          description: description || '',
+          reportedOn: now
+       };
+
+       await db.collection('reports').add(reportData);
+       logger.info('postReport: Report posted successfully');
+
+       res.status(200).json({
+          success: true
+       });
+    } catch (error) {
+        logger.error('postReport: Error posting report', error);
+        res.status(500).json({
+            success: false,
+            error: 'Error posting report: ' + error
+        });
+    }
+});
