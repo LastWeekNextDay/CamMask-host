@@ -646,15 +646,26 @@ exports.postComment = onRequest(async (req, res) => {
             return;
         }
 
+       const commentSnapshot = await db.collection('comments').orderBy('id').get();
+       let nextId = 0;
+
+       commentSnapshot.forEach(doc => {
+          const commentData = doc.data();
+          if (commentData.id === nextId) {
+             nextId++;
+          }
+       });
+
         const now = new Date().toISOString();
         const commentData = {
+            id: nextId,
             maskId: maskDocId,
             googleId: googleId,
             comment: comment,
             postedOn: now
         };
 
-        await db.collection('comments').add(commentData);
+        await db.collection('comments').doc(nextId.toString()).add(commentData);
         logger.info('postComment: Comment posted successfully');
 
         res.status(200).json({
