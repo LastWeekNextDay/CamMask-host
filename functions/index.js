@@ -390,7 +390,8 @@ exports.getMasks = onRequest(async (req, res) => {
       }
 
       const masksRef = db.collection('masks');
-      let masksQuery = masksRef.orderBy(orderBy, orderDirection);
+      let masksQuery = masksRef.where('isRemoved', '==', false)
+          .orderBy(orderBy, orderDirection);
 
       if (lastId) {
          logger.info('Starting after ID:', lastId);
