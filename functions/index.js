@@ -666,7 +666,7 @@ exports.postComment = onRequest(async (req, res) => {
             postedOn: now
         };
 
-        await db.collection('comments').doc(nextId.toString()).add(commentData);
+        await db.collection('comments').doc(nextId.toString()).set(commentData);
         logger.info('postComment: Comment posted successfully');
 
         res.status(200).json({
